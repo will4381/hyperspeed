@@ -6,7 +6,7 @@ const rpc = (op, args = {}) =>
 
 const ICONS = ['line/arrow-up', 'line/arrow-down', 'line/arrow-left', 'line/return', 'line/plus', 'line/minus',
   'line/refresh', 'line/cloud', 'line/copy', 'line/external-link', 'line/search', 'line/terminal',
-  'fill/play', 'fill/stop', 'fill/cloud'];
+  'line/trash', 'fill/play', 'fill/stop', 'fill/cloud'];
 const iconSvg = {};
 let iconId = 0;
 
@@ -184,10 +184,14 @@ function toggleTunnel(j) {
     act('tunnel', { name: j.name }).then(r => r.ok && toast(`OPENING TUNNEL FOR ${j.name.toUpperCase()}`));
     return;
   }
-  armed = j.name;
+  arm(j.name, `THIS MAKES ${j.name.toUpperCase()} PUBLIC. PRESS AGAIN TO CONFIRM`);
+}
+
+function arm(id, message) {
+  armed = id;
   clearTimeout(armedTimer);
   armedTimer = setTimeout(disarm, 4000);
-  toast(`THIS MAKES ${j.name.toUpperCase()} PUBLIC. PRESS AGAIN TO CONFIRM`);
+  toast(message);
   render();
 }
 
@@ -459,29 +463,42 @@ function renderHost() {
 let memEls;
 
 function renderMem() {
-  const rows = [
-    ['USED', host.mem_used, 'var(--red)'],
-    ['AVAIL', host.mem_avail, 'var(--yellow)'],
-    ['FREE', host.mem_free, 'var(--blue)'],
-    ['SWAP', host.swap_used, 'var(--mid)'],
-    ['SERVICES', jobs.reduce((n, j) => n + j.mem, 0), 'var(--green)'],
+  const groups = [
+    { title: 'TOTAL:', total: host.mem_total, rows: [
+      ['USED', host.mem_used, 'var(--red)'],
+      ['AVAIL', host.mem_avail, 'var(--yellow)'],
+      ['FREE', host.mem_free, 'var(--blue)'],
+      ['SWAP', host.swap_used, 'var(--mid)'],
+      ['SERVICES', jobs.reduce((n, j) => n + j.mem, 0), 'var(--green)'],
+    ] },
+    { title: 'STORAGE:', total: host.disk_total, rows: [
+      ['USED', host.disk_used, 'var(--red)'],
+      ['FREE', host.disk_free, 'var(--green)'],
+      ['SIMULATORS', sims.reduce((n, s) => n + s.size, 0), 'var(--blue)'],
+    ] },
   ];
   const root = $('mem');
   if (!memEls) {
-    const total = el('div', 'meter');
-    total.append(el('span', '', 'TOTAL:'), el('span', 'num', gb(host.mem_total)));
-    root.append(total);
-    memEls = rows.map(([label, , color]) => {
-      const row = el('div', 'meter');
-      const d = dots(color), num = el('span', 'num');
-      row.append(el('span', '', label), d, num);
-      root.append(row);
-      return { d, num };
+    memEls = groups.map((g, i) => {
+      const head = el('div', `meter${i ? ' group' : ''}`);
+      const total = el('span', 'num');
+      head.append(el('span', '', g.title), total);
+      root.append(head);
+      return { total, rows: g.rows.map(([label, , color]) => {
+        const row = el('div', 'meter');
+        const d = dots(color), num = el('span', 'num');
+        row.append(el('span', '', label), d, num);
+        root.append(row);
+        return { d, num };
+      }) };
     });
   }
-  rows.forEach(([, value], i) => {
-    setDots(memEls[i].d, value / host.mem_total * 100);
-    setText(memEls[i].num, gb(value));
+  groups.forEach((g, i) => {
+    setText(memEls[i].total, gb(g.total));
+    g.rows.forEach(([, value], k) => {
+      setDots(memEls[i].rows[k].d, value / g.total * 100);
+      setText(memEls[i].rows[k].num, gb(value));
+    });
   });
 }
 
@@ -571,6 +588,20 @@ function toggleSimLogs(s) {
   });
 }
 
+/* Deleting a simulator can't be undone, so like publishing it takes a second press. */
+function deleteSim(s) {
+  if (simUp(s) || s.busy) {
+    toast(`SHUT DOWN ${s.name.toUpperCase()} BEFORE DELETING IT`, true);
+    return;
+  }
+  if (armed === s.udid) {
+    disarm();
+    simAct('delete', s);
+    return;
+  }
+  arm(s.udid, `PERMANENTLY DELETES ${s.name.toUpperCase()} (${fmtBytes(s.size)}). PRESS AGAIN TO CONFIRM`);
+}
+
 function moveSim(delta) {
   if (!sims.length) return;
   const i = sims.findIndex(s => s.udid === simSel);
@@ -587,6 +618,7 @@ function makeSimRow(udid) {
   r.runtime = el('span');
   r.state = el('span');
   r.udid = el('span', '', udid);
+  r.disk = el('span');
   r.procs = el('span');
   r.mem = el('span');
   r.memD = el('span');
@@ -604,8 +636,9 @@ function makeSimRow(udid) {
   r.restart = button('line/refresh', 'Restart', () => simAct('restart', cur()));
   r.open = button('line/external-link', 'Show in Simulator', () => simAct('open', cur()));
   r.logs = button('line/terminal', 'Stream app logs', () => toggleSimLogs(cur()));
-  acts.append(r.toggle, r.restart, r.open, r.logs);
-  r.root.append(r.name, r.runtime, r.state, r.udid, r.procs, r.mem, r.memD, r.cpu, r.cpuD, acts);
+  r.del = button('line/trash', 'Delete simulator', () => deleteSim(cur()));
+  acts.append(r.toggle, r.restart, r.open, r.logs, r.del);
+  r.root.append(r.name, r.runtime, r.state, r.udid, r.disk, r.procs, r.mem, r.memD, r.cpu, r.cpuD, acts);
   return r;
 }
 
@@ -623,6 +656,7 @@ function renderSims() {
   for (const [id, r] of simCache) if (!seen.has(id)) { r.root.remove(); simCache.delete(id); }
   if (!curSim()) simSel = sims[0].udid;
   const memMax = Math.max(...sims.map(s => s.mem), 1);
+  setText($('sim-total'), `${sims.length} DEVICES, ${fmtBytes(sims.reduce((n, s) => n + s.size, 0))}`);
   sims.forEach((s, i) => {
     let r = simCache.get(s.udid);
     if (!r) {
@@ -633,10 +667,12 @@ function renderSims() {
     r.root.classList.toggle('sel', s.udid === simSel);
     setText(r.name, s.name);
     setText(r.runtime, s.runtime.toUpperCase());
-    const state = simStopping(s) ? 'stopping' : simStarting(s) ? 'booting' : s.state.toLowerCase();
+    const state = s.busy === 'deleting' ? 'deleting' : simStopping(s) ? 'stopping' : simStarting(s) ? 'booting' : s.state.toLowerCase();
     setText(r.state, state.toUpperCase());
     r.state.className = `st-${state}`;
     const up = simUp(s);
+    setText(r.disk, fmtBytes(s.size));
+    r.del.className = `act ic-trigger ${armed === s.udid ? 'armed' : up || s.busy ? 'off' : ''}`;
     setText(r.procs, up ? String(s.procs) : '-');
     setText(r.mem, s.mem ? fmtBytes(s.mem) : '-');
     setDots(r.memDots, s.mem / memMax * 100);
@@ -754,6 +790,7 @@ document.addEventListener('keydown', e => {
     else if (key === 'r') on(() => simAct('restart', s));
     else if (key === 'o') on(() => simAct('open', s));
     else if (key === 'l') on(() => toggleSimLogs(s));
+    else if (key === 'd') on(() => deleteSim(s));
   }
   else if (view === 'overview') {
     if (key === 'arrowup' || key === 'k') on(() => moveSel(-1));

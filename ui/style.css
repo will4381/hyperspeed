@@ -169,10 +169,11 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 .sp { flex: 1; }
 
 /* memory */
-.meters { display: flex; flex-direction: column; gap: 4px; }
+.meters { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
 .meter { display: flex; align-items: center; gap: 10px; }
 .meter > span:first-child { color: var(--mid); flex: 1; }
-.meter .num { width: 62px; }
+.meter .num { width: 72px; flex: none; }
+.meter.group { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
 .meter .dots { width: 96px; }
 
 /* public tunnels summary */
@@ -196,7 +197,7 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
   padding: 0 6px;
 }
 .tunnels .tr { --cols: minmax(100px, 1fr) 110px 110px 90px minmax(180px, 3fr) 80px; }
-.simtable .tr { --cols: minmax(150px, 2fr) 100px 80px minmax(120px, 1.6fr) 48px 62px 58px 44px 58px 96px; }
+.simtable .tr { --cols: minmax(150px, 2fr) 90px 80px minmax(120px, 1.5fr) 62px 48px 62px 58px 44px 58px 122px; }
 .tr.th { color: var(--text); flex: none; font-weight: 500; }
 .rows { flex: 1; min-height: 0; overflow-y: auto; }
 .tr > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -207,7 +208,7 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 .rows .tr.sel .name { color: #fff; }
 .num-l { text-align: right; }
 .st-running, .st-booted { color: var(--green); }
-.st-booting { color: var(--yellow); }
+.st-booting, .st-deleting { color: var(--yellow); }
 .st-stopping { color: var(--yellow); }
 .st-crashed { color: var(--red); }
 .st-live { color: var(--green); }

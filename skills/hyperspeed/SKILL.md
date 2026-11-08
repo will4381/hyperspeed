@@ -79,12 +79,15 @@ hyperspeed sim stop <name>
 hyperspeed sim restart <name>
 hyperspeed sim open <name>            # show in Simulator.app
 hyperspeed sim logs <name>            # toggles streaming on or off
+hyperspeed sim delete <udid>          # permanent; the device must be shut down
 hyperspeed logs "sim:iPhone 17 Pro" -n 50
 ```
 
 A name shared across runtimes resolves to the booted one, then the newest runtime, so use the UDID when the exact device matters. `boot` returns immediately, so check `sim ls` until it says `Booted`.
 
 A booted simulator may be in use by the user or another agent. Check with them before stopping or restarting one you didn't boot.
+
+`sim delete` permanently removes the device and its apps and data, so confirm with the user first. `sim ls` shows each device's disk use. A name shared by several devices is refused; use the UDID.
 
 `sim logs` only captures apps installed on that simulator, which keeps system noise out of the shared log buffer.
 

@@ -17,7 +17,7 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use sysinfo::{Pid, Process, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+use sysinfo::{Disks, Pid, Process, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 // ponytail: one shared ring, so a very noisy job can evict a quiet job's history. Per-job rings if that bites.
 const LOG_CAP: usize = 20_000;
@@ -97,6 +97,7 @@ struct Sim {
     name: String,
     runtime: String,
     state: String,
+    size: u64,
 }
 
 /// A boot/shutdown in flight. `target` lets the real device state end it early, since simctl can hang after the work is done.
@@ -543,7 +544,7 @@ fn parse_simctl(json: &str) -> Option<Vec<Sim>> {
         let short = runtime.rsplit('.').next().unwrap_or(runtime).replacen('-', " ", 1).replace('-', ".");
         for d in devices.as_array()?.iter().filter(|d| d["isAvailable"] == true) {
             let field = |k: &str| d[k].as_str().unwrap_or_default().to_string();
-            sims.push(Sim { udid: field("udid"), name: field("name"), runtime: short.clone(), state: field("state") });
+            sims.push(Sim { udid: field("udid"), name: field("name"), runtime: short.clone(), state: field("state"), size: d["dataPathSize"].as_u64().unwrap_or(0) });
         }
     }
     sims.sort_by(|a, b| (a.state == "Shutdown").cmp(&(b.state == "Shutdown")).then(b.runtime.cmp(&a.runtime)).then(a.name.cmp(&b.name)));
@@ -569,6 +570,10 @@ fn find_sim(d: &Daemon, reference: &str) -> Result<Sim, String> {
 fn sim_action(s: &Shared, reference: &str, action: &str) -> Result<(), String> {
     let mut d = s.lock().unwrap();
     let sim = find_sim(&d, reference)?;
+    // Names repeat across runtimes, and find_sim's best guess isn't good enough for something permanent.
+    if action == "delete" && sim.udid != reference && d.sims.iter().filter(|x| x.name.eq_ignore_ascii_case(reference)).count() > 1 {
+        return Err(format!("several simulators are named {}: use the UDID", sim.name));
+    }
     let label = format!("sim:{}", sim.name);
     match action {
         "open" => {
@@ -606,7 +611,7 @@ fn sim_action(s: &Shared, reference: &str, action: &str) -> Result<(), String> {
             });
             return Ok(());
         }
-        "boot" | "shutdown" | "restart" => {}
+        "boot" | "shutdown" | "restart" | "delete" => {}
         _ => return Err(format!("unknown simulator action: {action}")),
     }
     if let Some(op) = d.sim_busy.get_mut(&sim.udid) {
@@ -623,6 +628,8 @@ fn sim_action(s: &Shared, reference: &str, action: &str) -> Result<(), String> {
         return Err(format!("{} is busy", sim.name));
     }
     let steps: &[&str] = match (action, sim.state.as_str()) {
+        ("delete", "Shutdown") => &["delete"],
+        ("delete", _) => return Err(format!("{} must be shut down first", sim.name)),
         ("boot", "Booted" | "Booting") | ("shutdown", "Shutdown" | "Shutting Down") => return Ok(()),
         ("boot", _) | ("restart", "Shutdown") => &["boot"],
         ("shutdown", _) => &["shutdown"],
@@ -633,6 +640,7 @@ fn sim_action(s: &Shared, reference: &str, action: &str) -> Result<(), String> {
     let (op_label, target) = match action {
         "boot" => ("booting", Some("Booted")),
         "shutdown" => ("stopping", Some("Shutdown")),
+        "delete" => ("deleting", None),
         _ => ("booting", None), // a restart passes through both states, so only simctl can end it
     };
     d.sim_busy.insert(sim.udid.clone(), SimOp { id, label: op_label, target, pid: None, cancelled: false });
@@ -710,6 +718,7 @@ fn sampler(s: Shared) {
     let cores = System::physical_core_count().unwrap_or(0);
     let mut ports: HashMap<i32, Vec<u16>> = HashMap::new();
     let mut cpu_hist = VecDeque::new();
+    let mut disks = Disks::new_with_refreshed_list();
     let mut tick = 0u64;
     loop {
         sys.refresh_cpu_usage();
@@ -757,6 +766,11 @@ fn sampler(s: Shared) {
             run.lines_tick = 0;
         }
         d.sim_usage = simulator_usage(&sys);
+        if tick % 10 == 0 {
+            disks.refresh(true);
+        }
+        let root = disks.list().iter().find(|d| d.mount_point() == Path::new("/"));
+        let (disk_total, disk_free) = root.map_or((0, 0), |d| (d.total_space(), d.available_space()));
         let total_cpu = sys.global_cpu_usage();
         push_hist(&mut cpu_hist, total_cpu);
         let load = System::load_average();
@@ -776,6 +790,9 @@ fn sampler(s: Shared) {
             "mem_free": sys.free_memory(),
             "swap_used": sys.used_swap(),
             "swap_total": sys.total_swap(),
+            "disk_total": disk_total,
+            "disk_free": disk_free,
+            "disk_used": disk_total.saturating_sub(disk_free),
             "processes": sys.processes().len(),
             "cloudflared": cloudflared,
         });
@@ -822,7 +839,7 @@ fn state(s: &Shared) -> Value {
         .map(|x| {
             let (cpu, mem, procs) = d.sim_usage.get(&x.udid).copied().unwrap_or_default();
             json!({
-                "udid": x.udid, "name": x.name, "runtime": x.runtime, "state": x.state,
+                "udid": x.udid, "name": x.name, "runtime": x.runtime, "state": x.state, "size": x.size,
                 "busy": d.sim_busy.get(&x.udid).map(|op| op.label), "logging": d.sim_logs.contains_key(&x.udid),
                 "cpu": cpu, "mem": mem, "procs": procs,
             })
@@ -1045,10 +1062,11 @@ mod tests {
             "com.apple.CoreSimulator.SimRuntime.iOS-27-0":[
                 {"udid":"B","name":"New","state":"Shutdown","isAvailable":true},
                 {"udid":"C","name":"Gone","state":"Shutdown","isAvailable":false},
-                {"udid":"D","name":"Live","state":"Booted","isAvailable":true}]}}"#;
+                {"udid":"D","name":"Live","state":"Booted","isAvailable":true,"dataPathSize":42}]}}"#;
         let sims = parse_simctl(json).unwrap();
         assert_eq!(sims.iter().map(|s| s.udid.as_str()).collect::<Vec<_>>(), ["D", "B", "A"]);
         assert_eq!(sims[0].runtime, "iOS 27.0");
+        assert_eq!((sims[0].size, sims[1].size), (42, 0));
     }
 
     #[test]

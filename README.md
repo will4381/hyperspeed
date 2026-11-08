@@ -19,7 +19,7 @@ hyperspeed sim boot "iPhone 17 Pro"
 hyperspeed help
 ```
 
-**Keys:** `1` `2` `3` `4` views, `↑↓` select, `S` start, `X` end, `R` restart, `T` tunnel (press twice), `↵` console, `/` filter, `-` `+` poll rate. On the Simulators tab, `S` boots, `X` shuts down, `O` opens and `L` streams app logs.
+**Keys:** `1` `2` `3` `4` views, `↑↓` select, `S` start, `X` end, `R` restart, `T` tunnel (press twice), `↵` console, `/` filter, `-` `+` poll rate. On the Simulators tab, `S` boots, `X` shuts down, `O` opens, `L` streams app logs and `D` deletes (press twice).
 
 Servers run under a background daemon, so closing the window leaves them up. `hyperspeed quit` stops everything. After rebuilding, run `hyperspeed quit` so the next launch uses the new daemon.
 

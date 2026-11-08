@@ -23,7 +23,7 @@ const USAGE: &str = "hyperspeed: run all your dev servers from one place
   hyperspeed tunnel <name> [--host dev.example.com | --quick]
   hyperspeed untunnel <name>
   hyperspeed sim ls
-  hyperspeed sim boot|stop|restart|open|logs <name or udid>
+  hyperspeed sim boot|stop|restart|open|logs|delete <name or udid>
   hyperspeed quit                           stop everything and shut down the daemon
 ";
 
@@ -228,9 +228,10 @@ fn run(args: &[String]) -> Result<(), String> {
                     if state["simctl"] != true {
                         return Err("simulator list unavailable: is Xcode installed?".into());
                     }
-                    println!("{:<30} {:<14} {:<10} UDID", "NAME", "RUNTIME", "STATE");
+                    println!("{:<30} {:<14} {:<14} {:<9} UDID", "NAME", "RUNTIME", "STATE", "DISK");
                     for x in state["sims"].as_array().into_iter().flatten() {
-                        println!("{:<30} {:<14} {:<10} {}", x["name"].as_str().unwrap_or(""), x["runtime"].as_str().unwrap_or(""), x["state"].as_str().unwrap_or(""), x["udid"].as_str().unwrap_or(""));
+                        let disk = format!("{}MB", x["size"].as_u64().unwrap_or(0) / 1_048_576);
+                        println!("{:<30} {:<14} {:<14} {:<9} {}", x["name"].as_str().unwrap_or(""), x["runtime"].as_str().unwrap_or(""), x["state"].as_str().unwrap_or(""), disk, x["udid"].as_str().unwrap_or(""));
                     }
                 }
                 action => {
