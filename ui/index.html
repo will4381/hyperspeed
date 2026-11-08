@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hyperspeed</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav id="top">
+  <div class="top-side">
+  <div class="tabs" role="tablist">
+    <button data-view="overview" role="tab"><sup>1</sup>OVERVIEW</button>
+    <button data-view="console" role="tab"><sup>2</sup>CONSOLE</button>
+    <button data-view="tunnels" role="tab"><sup>3</sup>TUNNELS</button>
+    <button data-view="sims" role="tab"><sup>4</sup>SIMULATORS</button>
+  </div>
+  <i class="rule"></i>
+  </div>
+  <time id="clock">--:--:--</time>
+  <div class="top-side">
+  <i class="rule"></i>
+  <div class="refresh">
+    <button id="slower" class="ic-trigger" title="Poll slower" aria-label="Poll slower"><span data-ic="line/minus"></span></button>
+    <span id="interval">1000ms</span>
+    <button id="faster" class="ic-trigger" title="Poll faster" aria-label="Poll faster"><span data-ic="line/plus"></span></button>
+  </div>
+  <span id="up-label">UP:0/0</span>
+  <div id="up-bar" class="seg"></div>
+  </div>
+</nav>
+
+<main id="overview" class="view">
+  <section class="panel p-sys">
+    <header><span class="tag">SYSTEM INFORMATION</span></header>
+    <dl id="sys" class="kv"></dl>
+  </section>
+
+  <section class="panel p-compute">
+    <header><span class="tag">COMPUTE</span></header>
+    <div class="body">
+      <div class="cpu-line">
+        <b>CPU</b><div id="cpu-bar" class="seg"></div>
+        <span id="cpu-pct" class="num">0%</span><canvas id="cpu-spark" class="spark"></canvas>
+      </div>
+      <div id="cores" class="cores"></div>
+      <div class="load"><span>LOAD AVG.:</span><span id="load" class="num"></span><span class="sp"></span><span id="procs"></span></div>
+    </div>
+  </section>
+
+  <section class="panel p-mem">
+    <header><span class="tag">MEMORY</span></header>
+    <div id="mem" class="body meters"></div>
+  </section>
+
+  <section class="panel p-pub">
+    <header><span class="tag">PUBLIC</span></header>
+    <div id="pub" class="body pub"></div>
+  </section>
+
+  <section class="panel p-services">
+    <header><span class="tag">SERVICES</span></header>
+    <div class="table">
+      <div class="tr th">
+        <span>NAME</span><span>PORT</span><span>PID</span><span>STATE</span><span>UP</span>
+        <span>MEM.B</span><span></span><span>CPU%</span><span></span><span>RT</span><span>ERR</span><span></span>
+      </div>
+      <div id="rows" class="rows"></div>
+    </div>
+    <footer class="hints">
+      <span><i data-ic="line/arrow-up"></i>SELECT<i data-ic="line/arrow-down"></i></span>
+      <span><kbd>S</kbd>START</span>
+      <span><kbd>X</kbd>END</span>
+      <span><kbd>R</kbd>RESTART</span>
+      <span><kbd>T</kbd>TUNNEL</span>
+      <span>CONSOLE<i data-ic="line/return"></i></span>
+      <span id="toast" role="status"></span>
+    </footer>
+  </section>
+
+  <section class="panel p-detail">
+    <header><span class="tag" id="detail-title">METRICS</span></header>
+    <div class="body detail">
+      <div class="chart"><span>CPU</span><canvas id="d-cpu" class="spark wide"></canvas><b id="d-cpu-v" class="num">-</b></div>
+      <div class="chart"><span>MEM</span><canvas id="d-mem" class="spark wide"></canvas><b id="d-mem-v" class="num">-</b></div>
+      <div class="chart"><span>RT</span><canvas id="d-rt" class="spark wide"></canvas><b id="d-rt-v" class="num">-</b></div>
+      <div class="chart"><span>LOG/S</span><canvas id="d-log" class="spark wide"></canvas><b id="d-log-v" class="num">-</b></div>
+      <dl id="detail-kv" class="kv tight"></dl>
+    </div>
+  </section>
+
+  <section class="panel p-tail">
+    <header><span class="tag" id="tail-title">CONSOLE</span></header>
+    <div id="tail" class="log"></div>
+  </section>
+</main>
+
+<main id="console" class="view" hidden>
+  <section class="panel p-full">
+    <header><span class="tag">OBSERVABILITY CONSOLE</span></header>
+    <div class="toolbar">
+      <div id="job-filter" class="chips"></div>
+      <span class="sp"></span>
+      <div id="level-filter" class="chips">
+        <button data-level="all">ALL</button><button data-level="warn">WARN+</button><button data-level="err">ERR</button>
+      </div>
+      <label class="search"><i data-ic="line/search"></i><input id="search" placeholder="FILTER" spellcheck="false" autocomplete="off" aria-label="Filter log lines"></label>
+      <button id="follow" class="chip-toggle">FOLLOW</button>
+      <button id="clear">CLEAR</button>
+    </div>
+    <div id="console-log" class="log"></div>
+    <footer class="hints">
+      <span><kbd>/</kbd>FILTER</span>
+      <span id="console-count"></span>
+      <span>BACK<i data-ic="line/arrow-left"></i></span>
+    </footer>
+  </section>
+</main>
+
+<main id="tunnels" class="view" hidden>
+  <section class="panel p-full">
+    <header><span class="tag">CLOUDFLARE TUNNELS</span></header>
+    <div class="table tunnels">
+      <div class="tr th"><span>SERVER</span><span>LOCAL</span><span>MODE</span><span>STATUS</span><span>PUBLIC URL</span><span></span></div>
+      <div id="tunnel-rows" class="rows"></div>
+    </div>
+    <footer class="hints">
+      <span id="cf-state"></span>
+      <span class="dim">CUSTOM DOMAIN: hyperspeed tunnel &lt;name&gt; --host dev.example.com</span>
+      <span id="toast-t" role="status"></span>
+    </footer>
+  </section>
+</main>
+<main id="sims" class="view" hidden>
+  <section class="panel p-full">
+    <header><span class="tag">SIMULATORS</span></header>
+    <div class="table simtable">
+      <div class="tr th"><span>NAME</span><span>RUNTIME</span><span>STATE</span><span>UDID</span><span>PROCS</span><span>MEM.B</span><span></span><span>CPU%</span><span></span><span></span></div>
+      <div id="sim-rows" class="rows"></div>
+    </div>
+    <footer class="hints">
+      <span><i data-ic="line/arrow-up"></i>SELECT<i data-ic="line/arrow-down"></i></span>
+      <span><kbd>S</kbd>BOOT</span>
+      <span><kbd>X</kbd>SHUTDOWN</span>
+      <span><kbd>R</kbd>RESTART</span>
+      <span><kbd>O</kbd>OPEN</span>
+      <span><kbd>L</kbd>APP LOGS</span>
+      <span id="toast-s" role="status"></span>
+    </footer>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
