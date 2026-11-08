@@ -73,6 +73,7 @@
       <span><kbd>X</kbd>END</span>
       <span><kbd>R</kbd>RESTART</span>
       <span><kbd>T</kbd>TUNNEL</span>
+      <span><kbd>D</kbd>REMOVE</span>
       <span>CONSOLE<i data-ic="line/return"></i></span>
       <span id="toast" role="status"></span>
     </footer>
@@ -149,7 +150,20 @@
       <span id="toast-s" role="status"></span>
     </footer>
   </section>
+  <section class="panel p-browsers">
+    <header><span class="tag" id="browser-title">TEST BROWSERS</span><span class="sp"></span><button id="stop-all" hidden>STOP ALL</button></header>
+    <div class="table browsertable">
+      <div class="tr th"><span>TYPE</span><span>PROJECT</span><span>STATE</span><span>PID</span><span>AGE</span><span>PROCS</span><span>MEM.B</span><span></span><span>CPU%</span><span></span><span></span></div>
+      <div id="browser-rows" class="rows"></div>
+    </div>
+  </section>
 </main>
-<script src="app.js"></script>
+<script src="js/core.js"></script>
+<script src="js/state.js"></script>
+<script src="js/logs.js"></script>
+<script src="js/overview.js"></script>
+<script src="js/sims.js"></script>
+<script src="js/browsers.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

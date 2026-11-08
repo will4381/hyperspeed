@@ -19,7 +19,7 @@ hyperspeed sim boot "iPhone 17 Pro"
 hyperspeed help
 ```
 
-**Keys:** `1` `2` `3` `4` views, `↑↓` select, `S` start, `X` end, `R` restart, `T` tunnel (press twice), `↵` console, `/` filter, `-` `+` poll rate. On the Simulators tab, `S` boots, `X` shuts down, `O` opens, `L` streams app logs and `D` deletes (press twice).
+**Keys:** `1` `2` `3` `4` views, `↑↓` select, `S` start, `X` end, `R` restart, `T` tunnel (press twice), `D` remove (press twice), `↵` console, `/` filter, `-` `+` poll rate. On the Simulators tab, `S` boots, `X` shuts down, `O` opens, `L` streams app logs and `D` deletes (press twice).
 
 Servers run under a background daemon, so closing the window leaves them up. `hyperspeed quit` stops everything. After rebuilding, run `hyperspeed quit` so the next launch uses the new daemon.
 
@@ -32,4 +32,4 @@ ln -s "$PWD/skills/hyperspeed" ~/.claude/skills/hyperspeed
 ```
 
 **Mono font:** Relative Mono, copied from `relative-design/fonts/relative-mono` into `ui/fonts/`.
-**Icons:** copied from `relative-design/dist/svg` into `ui/icons/`; add a name to `ICONS` in `ui/app.js` to use another.
+**Icons:** copied from `relative-design/dist/svg` into `ui/icons/`; add a name to `ICONS` in `ui/js/core.js` to use another.

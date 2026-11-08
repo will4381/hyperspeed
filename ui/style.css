@@ -110,6 +110,11 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
     "pub detail tail";
 }
 #console, #tunnels, #sims { display: flex; }
+#sims { flex-direction: column; gap: 10px; }
+.p-browsers { flex: 0 0 230px; }
+#stop-all { padding: 2px 8px; color: var(--red); background: #1a1a1a; }
+#stop-all:hover { color: #fff; }
+#stop-all.armed { color: #000; background: var(--orange); }
 .p-sys { grid-area: sys; } .p-compute { grid-area: compute; } .p-mem { grid-area: mem; }
 .p-pub { grid-area: pub; } .p-services { grid-area: services; } .p-detail { grid-area: detail; } .p-tail { grid-area: tail; }
 .p-full { flex: 1; }
@@ -161,8 +166,8 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
   grid-auto-flow: column;
 }
 .core { display: flex; align-items: center; gap: 8px; line-height: 19px; color: var(--mid); }
-.core .sp { flex: 1; }
-.core .dots { width: 96px; --c: var(--orange); }
+.core-id { width: 26px; flex: none; }
+.core .dots { flex: 1; width: auto; min-width: 0; }
 .core .num { width: 34px; color: var(--text); }
 .load { display: flex; gap: 14px; margin-top: 8px; color: var(--mid); }
 .load .num { color: var(--text); word-spacing: 6px; }
@@ -188,7 +193,7 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 /* tables */
 .table { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 0; }
 .tr {
-  --cols: minmax(90px, 1.5fr) 58px 58px 70px 76px 62px 58px 44px 58px 54px 34px 96px;
+  --cols: minmax(90px, 1.5fr) 58px 58px 70px 76px 62px 58px 44px 58px 54px 34px 122px;
   display: grid;
   grid-template-columns: var(--cols);
   gap: 8px;
@@ -198,6 +203,7 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 }
 .tunnels .tr { --cols: minmax(100px, 1fr) 110px 110px 90px minmax(180px, 3fr) 80px; }
 .simtable .tr { --cols: minmax(150px, 2fr) 90px 80px minmax(120px, 1.5fr) 62px 48px 62px 58px 44px 58px 122px; }
+.browsertable .tr { --cols: minmax(130px, 1fr) minmax(150px, 1.6fr) 80px 62px 80px 48px 62px 58px 44px 58px 40px; }
 .tr.th { color: var(--text); flex: none; font-weight: 500; }
 .rows { flex: 1; min-height: 0; overflow-y: auto; }
 .tr > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
