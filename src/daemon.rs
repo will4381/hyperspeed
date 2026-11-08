@@ -615,7 +615,7 @@ fn sim_action(s: &Shared, reference: &str, action: &str) -> Result<(), String> {
         _ => return Err(format!("unknown simulator action: {action}")),
     }
     if let Some(op) = d.sim_busy.get_mut(&sim.udid) {
-        if action == "shutdown" && op.label == "stopping" {
+        if (action == "shutdown" && op.label == "stopping") || (action == "delete" && op.label == "deleting") {
             return Ok(());
         }
         if action == "shutdown" && op.label == "booting" {
@@ -678,12 +678,12 @@ fn sim_action(s: &Shared, reference: &str, action: &str) -> Result<(), String> {
                 let _ = simctl(&["shutdown", &sim.udid], |_| {});
             }
         }
+        // Refresh before clearing busy, so a finished op never shows as idle with its old state.
+        refresh_sims(&s);
         let mut d = s.lock().unwrap();
         if d.sim_busy.get(&sim.udid).is_some_and(|op| op.id == id) {
             d.sim_busy.remove(&sim.udid);
         }
-        drop(d);
-        refresh_sims(&s);
     });
     Ok(())
 }

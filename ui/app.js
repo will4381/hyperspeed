@@ -264,6 +264,21 @@ function ingest(lines) {
   if (view === 'overview') tailView.append(lines);
 }
 
+/* A deleted simulator shouldn't linger as a filter or in the console. */
+function pruneDeletedSims() {
+  if (!simctlOk) return; // an empty list only means "none" when simctl answered
+  const live = new Set(sims.map(s => `sim:${s.name}`));
+  const gone = new Set([...logSources].filter(n => n.startsWith('sim:') && !live.has(n)));
+  if (!gone.size) return;
+  gone.forEach(n => logSources.delete(n));
+  if (gone.has(filterJob)) filterJob = '';
+  for (let i = allLines.length - 1; i >= 0; i--) if (gone.has(allLines[i].job)) allLines.splice(i, 1);
+  consoleView.rebuild();
+  tailView.rebuild();
+}
+
+let chipInView = null;
+
 function renderChips() {
   const root = $('job-filter');
   const names = ['', ...new Set([...jobs.map(j => j.name), ...logSources, filterJob].filter(Boolean))];
@@ -281,6 +296,10 @@ function renderChips() {
     }));
   }
   [...root.children].forEach(b => b.classList.toggle('on', b.dataset.job === filterJob));
+  if (chipInView !== filterJob) {
+    chipInView = filterJob;
+    [...root.children].find(b => b.dataset.job === filterJob)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
   document.querySelectorAll('#level-filter button').forEach(b => b.classList.toggle('on', b.dataset.level === filterLevel));
   $('follow').classList.toggle('on', follow);
 }
@@ -590,12 +609,15 @@ function toggleSimLogs(s) {
 
 /* Deleting a simulator can't be undone, so like publishing it takes a second press. */
 function deleteSim(s) {
-  if (simUp(s) || s.busy) {
+  if (s.busy === 'deleting') return;
+  if (s.busy || s.state !== 'Shutdown') {
     toast(`SHUT DOWN ${s.name.toUpperCase()} BEFORE DELETING IT`, true);
     return;
   }
   if (armed === s.udid) {
     disarm();
+    s.busy = 'deleting'; // show it now, so a repeat press has nothing to act on
+    renderSims();
     simAct('delete', s);
     return;
   }
@@ -644,6 +666,8 @@ function makeSimRow(udid) {
 
 function renderSims() {
   const root = $('sim-rows');
+  const n = sims.length;
+  setText($('sim-total'), `${n} DEVICE${n === 1 ? '' : 'S'}, ${fmtBytes(sims.reduce((t, s) => t + s.size, 0))}`);
   if (!sims.length) {
     if (!root.querySelector('.empty')) {
       simCache.clear();
@@ -656,7 +680,6 @@ function renderSims() {
   for (const [id, r] of simCache) if (!seen.has(id)) { r.root.remove(); simCache.delete(id); }
   if (!curSim()) simSel = sims[0].udid;
   const memMax = Math.max(...sims.map(s => s.mem), 1);
-  setText($('sim-total'), `${sims.length} DEVICES, ${fmtBytes(sims.reduce((n, s) => n + s.size, 0))}`);
   sims.forEach((s, i) => {
     let r = simCache.get(s.udid);
     if (!r) {
@@ -740,6 +763,7 @@ async function tick() {
       lastSeq = l.seq;
       ingest(l.lines);
     }
+    pruneDeletedSims();
     render();
   } catch (e) {
     toast('DAEMON NOT RESPONDING. RELAUNCH HYPERSPEED.', true);
@@ -832,6 +856,13 @@ document.querySelectorAll('#level-filter button').forEach(b => {
     consoleView.rebuild();
   };
 });
+$('job-filter').addEventListener('wheel', e => {
+  // Lets a regular mouse wheel scroll the row sideways.
+  if (e.deltaX === 0) {
+    e.currentTarget.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }
+}, { passive: false });
 $('console-log').addEventListener('wheel', e => {
   // Scrolling up pauses follow; reaching the bottom resumes it.
   if (e.deltaY < 0 && follow) { follow = false; renderChips(); }

@@ -278,7 +278,11 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 
 /* console toolbar */
 .toolbar { flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-.chips { display: flex; gap: 2px; flex-wrap: wrap; }
+.chips { display: flex; gap: 2px; flex: none; }
+.chips button { flex: none; }
+#job-filter { flex: 1 1 0; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+#job-filter::-webkit-scrollbar { display: none; }
+.search, #follow, #clear { flex: none; }
 .chips button, #follow, #clear { padding: 2px 8px; color: var(--mid); background: #141414; white-space: nowrap; }
 .chips button:hover, #follow:hover, #clear:hover { color: #fff; }
 .chips button.on, #follow.on { color: #000; background: var(--green); }
