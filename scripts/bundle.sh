@@ -3,6 +3,7 @@
 set -e
 cd "$(dirname "$0")/.."
 
+export HYPERSPEED_COMMIT="$(git rev-parse HEAD 2>/dev/null || true)"
 cargo install --path . --force
 BIN="$HOME/.cargo/bin/hyperspeed"
 APP="/Applications/Hyperspeed.app"

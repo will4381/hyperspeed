@@ -12,7 +12,7 @@ const allLines = [];
 const MAX_LINES = 20000;
 
 function toast(msg, bad = false) {
-  for (const t of [$('toast'), $('toast-t'), $('toast-s')]) {
+  for (const t of document.querySelectorAll('[id^="toast"]')) {
     t.textContent = msg;
     t.classList.toggle('bad', bad);
   }
@@ -93,6 +93,48 @@ function removeJob(j) {
     return;
   }
   arm(key, `REMOVES ${j.name.toUpperCase()} FROM SERVICES. PRESS AGAIN TO CONFIRM`);
+}
+
+function restartDaemon() {
+  if (armed === 'daemon') {
+    disarm();
+    toast('RESTARTING DAEMON');
+    act('restart_daemon');
+    return;
+  }
+  const n = jobs.filter(j => j.status === 'running').length;
+  arm('daemon', `RESTARTS THE DAEMON AND ${n} RUNNING SERVICE${n === 1 ? '' : 'S'}, AND CLOSES TUNNELS. PRESS AGAIN TO CONFIRM`);
+}
+
+let updating = false;
+
+function checkForUpdate() {
+  rpc('update_check').then(r => { if (!updating) $('update').hidden = !r.available; }).catch(() => {});
+}
+
+async function startUpdate() {
+  if (armed !== 'update') {
+    const n = jobs.filter(j => j.status === 'running').length;
+    arm('update', `REBUILDS FROM GITHUB, RESTARTS ${n} SERVICE${n === 1 ? '' : 'S'} AND CLOSES TUNNELS. PRESS AGAIN TO CONFIRM`);
+    return;
+  }
+  disarm();
+  const r = await rpc('update_start').catch(e => ({ ok: false, error: String(e) }));
+  if (!r.ok) {
+    toast(r.error.toUpperCase(), true);
+    return;
+  }
+  updating = true;
+  $('update').hidden = true;
+  toast('UPDATING FROM GITHUB. THE APP WILL REOPEN WHEN DONE');
+}
+
+async function pollUpdate() {
+  const r = await rpc('update_status').catch(() => null);
+  if (r?.state !== 'failed') return;
+  updating = false;
+  $('update').hidden = false;
+  toast('UPDATE FAILED. SEE UPDATE.LOG IN APPLICATION SUPPORT/HYPERSPEED', true);
 }
 
 function arm(id, message) {

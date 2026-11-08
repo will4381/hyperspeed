@@ -25,6 +25,8 @@
     <span id="interval">1000ms</span>
     <button id="faster" class="ic-trigger" title="Poll faster" aria-label="Poll faster"><span data-ic="line/plus"></span></button>
   </div>
+  <button id="update" class="ic-trigger" hidden><span data-ic="line/arrow-up"></span>UPDATE</button>
+  <button id="restart-daemon" class="ic-trigger" title="Restart daemon" aria-label="Restart daemon"><span data-ic="line/refresh"></span></button>
   <span id="up-label">UP:0/0</span>
   <div id="up-bar" class="seg"></div>
   </div>
@@ -113,6 +115,7 @@
       <span><kbd>/</kbd>FILTER</span>
       <span id="console-count"></span>
       <span>BACK<i data-ic="line/arrow-left"></i></span>
+      <span id="toast-c" role="status"></span>
     </footer>
   </section>
 </main>

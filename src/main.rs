@@ -1,4 +1,5 @@
 mod daemon;
+mod update;
 mod window;
 
 use serde_json::{json, Value};
@@ -24,6 +25,7 @@ const USAGE: &str = "hyperspeed: run all your dev servers from one place
   hyperspeed untunnel <name>
   hyperspeed sim ls
   hyperspeed sim boot|stop|restart|open|logs|delete <name or udid>
+  hyperspeed restart-daemon                 restart the daemon and the services it was running
   hyperspeed quit                           stop everything and shut down the daemon
 ";
 
@@ -60,6 +62,29 @@ pub fn ensure_daemon() -> Result<(), String> {
         std::thread::sleep(Duration::from_millis(50));
     }
     Err("daemon didn't come up; see ~/Library/Application Support/Hyperspeed/daemon.log".into())
+}
+
+/// Replaces the daemon with one from this binary, then starts whatever was running before.
+pub fn restart_daemon() -> Result<usize, String> {
+    let running: Vec<String> = rpc(json!({ "op": "state" }))
+        .map(|state| state["jobs"].as_array().into_iter().flatten().filter(|j| j["status"] == "running").filter_map(|j| j["name"].as_str().map(String::from)).collect())
+        .unwrap_or_default();
+    if rpc(json!({ "op": "quit" })).is_ok() {
+        for _ in 0..200 {
+            if UnixStream::connect(daemon::socket_path()).is_err() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        std::thread::sleep(Duration::from_millis(200)); // lets the old process release its lock
+    }
+    ensure_daemon()?;
+    for name in &running {
+        if let Err(e) = rpc(json!({ "op": "start", "name": name })) {
+            eprintln!("{e}");
+        }
+    }
+    Ok(running.len())
 }
 
 fn rpc(req: Value) -> Result<Value, String> {
@@ -240,6 +265,7 @@ fn run(args: &[String]) -> Result<(), String> {
                 }
             }
         }
+        "restart-daemon" => println!("daemon restarted, services started: {}", restart_daemon()?),
         "quit" => {
             rpc(json!({ "op": "quit" }))?;
         }

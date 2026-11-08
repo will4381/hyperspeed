@@ -77,6 +77,12 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 .refresh button { color: var(--orange); font-size: 13px; padding: 4px 2px; }
 .refresh button:hover { color: #fff; }
 #up-bar { width: 96px; height: 13px; }
+#update { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; color: var(--orange); white-space: nowrap; }
+#update:hover { color: #fff; }
+#update.armed { color: #000; background: var(--orange); }
+#restart-daemon { color: var(--orange); font-size: 13px; padding: 4px; }
+#restart-daemon:hover { color: #fff; }
+#restart-daemon.armed { color: #000; background: var(--orange); }
 
 /* segmented bars */
 .seg { display: flex; gap: 2px; flex: 1; height: 15px; }
@@ -251,8 +257,8 @@ sup { color: var(--orange); font-size: 9px; line-height: 0; margin-right: 2px; v
 .hints [data-ic] { color: var(--orange); font-size: 12px; }
 .hints kbd { font: inherit; color: var(--orange); }
 .hints .dim, #console-count { color: var(--mid); }
-#toast, #toast-t, #toast-s { margin-left: auto; color: var(--orange); overflow: hidden; text-overflow: ellipsis; }
-#toast.bad, #toast-t.bad, #toast-s.bad { color: var(--red); }
+[id^="toast"] { margin-left: auto; color: var(--orange); overflow: hidden; text-overflow: ellipsis; }
+[id^="toast"].bad { color: var(--red); }
 
 /* metrics detail */
 .detail { overflow: hidden; }

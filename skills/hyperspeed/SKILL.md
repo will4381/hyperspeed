@@ -99,4 +99,4 @@ killall -9 com.apple.CoreSimulator.CoreSimulatorService
 
 ## Shutting down
 
-`hyperspeed quit` stops every managed server and closes every tunnel. Only run it when the user wants that, or after upgrading the binary so the next launch uses the new daemon. Booted simulators are left running.
+`hyperspeed quit` stops every managed server and closes every tunnel, so only run it when the user wants that. After upgrading the binary, use `hyperspeed restart-daemon`, which starts the running services again but closes tunnels. Booted simulators are left running either way.

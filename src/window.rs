@@ -3,6 +3,7 @@
 use muda::{Menu, PredefinedMenuItem, Submenu};
 use rust_embed::Embed;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tao::dpi::LogicalSize;
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoop};
@@ -10,6 +11,26 @@ use tao::platform::macos::WindowBuilderExtMacOS;
 use tao::window::WindowBuilder;
 use wry::http::{header::CONTENT_TYPE, Request, Response};
 use wry::WebViewBuilder;
+
+/// Keeps polls from respawning the daemon halfway through a deliberate restart.
+static RESTARTING: AtomicBool = AtomicBool::new(false);
+
+fn restart_daemon() -> Result<String, String> {
+    RESTARTING.store(true, Ordering::SeqCst);
+    let result = crate::restart_daemon();
+    RESTARTING.store(false, Ordering::SeqCst);
+    result.map(|_| r#"{"ok":true}"#.to_string())
+}
+
+fn forward(body: &str) -> Result<String, String> {
+    crate::call(body).or_else(|e| {
+        if RESTARTING.load(Ordering::SeqCst) {
+            return Err(e);
+        }
+        crate::ensure_daemon()?; // a stopped or crashed daemon comes back on its own while the window is open
+        crate::call(body)
+    })
+}
 
 #[derive(Embed)]
 #[folder = "ui/"]
@@ -29,7 +50,16 @@ fn mime(path: &str) -> &'static str {
 fn respond(req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     let path = req.uri().path().trim_start_matches('/');
     if path == "rpc" {
-        let body = crate::call(&String::from_utf8_lossy(req.body())).unwrap_or_else(|e| serde_json::json!({ "ok": false, "error": e }).to_string());
+        let body = String::from_utf8_lossy(req.body());
+        let op = serde_json::from_str::<serde_json::Value>(&body).ok().and_then(|v| v["op"].as_str().map(String::from)).unwrap_or_default();
+        let result = match op.as_str() {
+            "restart_daemon" => restart_daemon(),
+            "update_check" => crate::update::check(),
+            "update_start" => crate::update::start(),
+            "update_status" => crate::update::status(),
+            _ => forward(&body),
+        };
+        let body = result.unwrap_or_else(|e| serde_json::json!({ "ok": false, "error": e }).to_string());
         return Response::builder().header(CONTENT_TYPE, "application/json").body(body.into_bytes()).unwrap();
     }
     let path = if path.is_empty() { "index.html" } else { path };

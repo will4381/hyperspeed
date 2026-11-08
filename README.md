@@ -21,7 +21,9 @@ hyperspeed help
 
 **Keys:** `1` `2` `3` `4` views, `↑↓` select, `S` start, `X` end, `R` restart, `T` tunnel (press twice), `D` remove (press twice), `↵` console, `/` filter, `-` `+` poll rate. On the Simulators tab, `S` boots, `X` shuts down, `O` opens, `L` streams app logs and `D` deletes (press twice).
 
-Servers run under a background daemon, so closing the window leaves them up. `hyperspeed quit` stops everything. After rebuilding, run `hyperspeed quit` so the next launch uses the new daemon.
+Servers run under a background daemon, so closing the window leaves them up. `hyperspeed quit` stops everything. After rebuilding, run `hyperspeed restart-daemon` or use the restart button in the header to load the new daemon; running services start again automatically, but tunnels close.
+
+The **Update** button in the top bar appears when GitHub has a newer version. It rebuilds from source, so it needs Rust installed.
 
 Data lives in `~/Library/Application Support/Hyperspeed/`.
 

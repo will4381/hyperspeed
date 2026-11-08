@@ -6,6 +6,8 @@ function renderTop() {
   paintSeg($('up-bar'), jobs.length ? up / jobs.length : 0, t => ['#ec2f2f', '#f0682a', '#f59a2e', '#f2c53a', '#e9e23c', '#c7ee3e', '#7cf04e', '#22f566'][Math.floor(t * 8)]);
   setText($('clock'), clockOf(Date.now()));
   setText($('interval'), `${poll}ms`);
+  $('restart-daemon').classList.toggle('armed', armed === 'daemon');
+  $('update').classList.toggle('armed', armed === 'update');
 }
 
 function render() {
@@ -29,7 +31,7 @@ function render() {
 
 /* ---- polling ---- */
 
-let timer = 0, inFlight = false;
+let timer = 0, inFlight = false, daemonDown = false;
 
 async function tick() {
   if (inFlight) return;
@@ -37,6 +39,11 @@ async function tick() {
   try {
     const s = await rpc('state');
     if (!s.ok) throw new Error(s.error);
+    if (updating) pollUpdate();
+    if (daemonDown) {
+      daemonDown = false;
+      toast('');
+    }
     jobs = s.jobs;
     host = s.host;
     sims = s.sims;
@@ -58,7 +65,8 @@ async function tick() {
     pruneGoneSources();
     render();
   } catch (e) {
-    toast('DAEMON NOT RESPONDING. RELAUNCH HYPERSPEED.', true);
+    daemonDown = true;
+    toast('DAEMON NOT RESPONDING. RETRYING', true);
   } finally {
     inFlight = false;
     clearTimeout(timer);
@@ -125,6 +133,8 @@ document.querySelectorAll('.tabs button').forEach(b => {
   b.onclick = () => (b.dataset.view === 'console' ? openConsole(filterJob) : setView(b.dataset.view));
 });
 $('stop-all').onclick = stopAllBrowsers;
+$('restart-daemon').onclick = restartDaemon;
+$('update').onclick = startUpdate;
 $('slower').onclick = () => stepPoll(1);
 $('faster').onclick = () => stepPoll(-1);
 $('follow').onclick = () => {
@@ -182,4 +192,6 @@ addEventListener('resize', render);
   setView('overview');
   tick();
   setInterval(renderTop, 1000);
+  checkForUpdate();
+  setInterval(checkForUpdate, 3600000);
 })();
